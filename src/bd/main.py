@@ -1,4 +1,4 @@
-from crypt import methods
+''' from crypt import methods
 from flask import Flask, render_template, request
 # from flask_sqlalchemy import SQLAlchemy
 # from flask_migrate import Migrate
@@ -24,4 +24,4 @@ def home():
 # print(prueba)
 
 if __name__ == "__main__":
-    app.run(debug = True)
+    app.run(debug = True) '''

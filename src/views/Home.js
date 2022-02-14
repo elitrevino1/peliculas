@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import { Container, Row, Col, Button, Form, Card, Navbar, Modal } from "react-bootstrap";
 import logo from "../white.png";
+import axios from "axios";
 
 class Home extends Component {
     constructor(props) {
@@ -14,13 +15,13 @@ class Home extends Component {
             protagonistas: "",
             peliculaID: -1,
             categoriaSearch: undefined,
-            peliculas: [
-                { id: 1, nombre: "Hunger Games", categoria: 2, duracion: 120, director: "Suzanne Collins", protagonistas: ["Jennifer Lawrence", "Josh Hutcherson", "Liam Hemsworth"] },
+            peliculas: []
+                /*[ { id: 1, nombre: "Hunger Games", categoria: 2, duracion: 120, director: "Suzanne Collins", protagonistas: ["Jennifer Lawrence", "Josh Hutcherson", "Liam Hemsworth"] },
                 { id: 2, nombre: "Harry Potter", categoria: 3, duracion: 120, director: "JK Rowling", protagonistas: ["Daniel Radcliffe", "Emma Watson", "Rupert Grint"] },
                 { id: 3, nombre: "Catching Fire", categoria: 3, duracion: 120, director: "Suzanne Collins", protagonistas: ["Jennifer Lawrence", "Josh Hutcherson", "Liam Hemsworth"] },
                 { id: 4, nombre: "Mean Girls", categoria: 2, duracion: 120, director: "Tina Fey", protagonistas: ["Rachel McAdams", "Lindsay Lohan", "Amanda Seyfried"] },
                 { id: 5, nombre: "Mockingjay", categoria: 3, duracion: 120, director: "Suzanne Collins", protagonistas: ["Jennifer Lawrence", "Josh Hutcherson", "Liam Hemsworth"] },
-                { id: 6, nombre: "Divergent", categoria: 1, duracion: 120, director: "Veronica Roth", protagonistas: ["Shailene Woodley", "Theo James", "Ansel Elgort"] }],
+                { id: 6, nombre: "Divergent", categoria: 1, duracion: 120, director: "Veronica Roth", protagonistas: ["Shailene Woodley", "Theo James", "Ansel Elgort"] } ]*/,
             searchResults: [],
             search: "",
             categorias: [
@@ -32,8 +33,52 @@ class Home extends Component {
         };
     }
 
-    handleShow = () => this.setState({ show: true });
-    handleClose = () => this.setState({ show: false });
+    componentDidMount() {
+        this.getPeliculas();
+    }
+
+    async getPeliculas() {
+        let peliculasBD = await axios.get("http://localhost:8080/catalog");
+        let peliculas = [];
+        let ids = [];
+        peliculasBD.data.forEach((peliBD) => {
+            if (ids.includes(peliBD.id)) {
+                peliculas.forEach((peli) => {
+                    if (peli.id === peliBD.id) {
+                        peli.protagonistas.push(peliBD.Actor);
+                    }
+                })
+            } else {
+                ids.push(peliBD.id);
+                let arr = [];
+                arr.push(peliBD.Actor);
+                peliculas.push(
+                    {
+                        id: peliBD.id,
+                        nombre: peliBD.Nombre,
+                        duracion: peliBD.Duracion,
+                        director: peliBD.Director,
+                        categoria: peliBD.Categoria,
+                        protagonistas: arr
+                    });
+            }
+        })
+        peliculas.sort(this.sortTitulos);
+        this.setState({ peliculas: peliculas })
+    }
+
+    sortTitulos(a, b) {
+        if (a.nombre.toLowerCase() < b.nombre.toLowerCase()) {
+            return -1;
+        }
+        if (a.nombre.toLowerCase() > b.nombre.toLowerCase()) {
+            return 1;
+        }
+        return 0;
+    }
+
+    /* handleShow = () => this.setState({ show: true });
+    handleClose = () => this.setState({ show: false }); */
 
     peliculaCard(nombre, categoria, duracion, director, protagonistas, id) {
         return (
@@ -260,7 +305,7 @@ class Home extends Component {
 
     deletePelicula(id) {
         this.state.peliculas.forEach((pelicula, index) => {
-            if(pelicula.id === id){
+            if (pelicula.id === id) {
                 this.state.peliculas.splice(index, 1);
             }
         })
@@ -268,8 +313,7 @@ class Home extends Component {
 
     async onSubmitSearch() {
         let searchResults = await this.search();
-        this.setState({ searchResults: searchResults });
-        this.setState({ content: "search" });
+        this.setState({ searchResults: searchResults, content: "search", categoriaResults: "" });
     }
 
     async onSubmitCategoria(value) {
@@ -283,18 +327,64 @@ class Home extends Component {
     }
 
     async onSubmitEdit(id) {
-        await this.editPelicula(id);
+        let pelicula = {
+            nombre: this.state.nombre,
+            categoria: this.state.categoria,
+            duracion: this.state.duracion,
+            director: this.state.director,
+            id: id
+        };
+        let response1 = await axios.post('http://localhost:8080/editPelicula', pelicula);
+
+        let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim() });
+
+        let pid = {
+            peliculaID: id
+        }
+        let response2 = await axios.post('http://localhost:8080/resetActores', pid);
+
+
+        arr.forEach(async (actor) => {
+            let protagonista = {
+                peliculaID: id,
+                actor: actor
+            }
+            let response3 = await axios.post('http://localhost:8080/editActores', protagonista);
+        })
+
+        this.componentDidMount();
         this.setState({ content: "catalog", nombre: "", categoria: undefined, duracion: undefined, director: "", protagonistas: "", peliculaID: -1 });
     }
 
     async onSubmitAdd() {
-        await this.addPelicula();
+        let pelicula = {
+            nombre: this.state.nombre,
+            categoria: this.state.categoria,
+            duracion: this.state.duracion,
+            director: this.state.director
+        };
+        let response1 = await axios.post('http://localhost:8080/addPelicula', pelicula);
+
+        let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim() });
+        arr.forEach(async (actor) => {
+            let protagonista = {
+                actor: actor
+            }
+            let response2 = await axios.post('http://localhost:8080/addActores', protagonista);
+        })
+
+        this.componentDidMount();
         this.setState({ content: "catalog", nombre: "", categoria: undefined, duracion: undefined, director: "", protagonistas: "" });
     }
 
     async onSumbitDelete(id) {
-        await this.deletePelicula(id);
+        let pid = {
+            peliculaID: id
+        }
+        let response1 = await axios.post('http://localhost:8080/deletePelicula', pid);
         /* this.handleClose; */
+        
+        this.componentDidMount();
         this.setState({ content: "catalog" });
     }
 
@@ -303,7 +393,7 @@ class Home extends Component {
             <>
                 <Navbar bg="info" sticky="top">
                     <Container>
-                        <Navbar.Brand onClick={() => { this.setState({ content: "catalog", search: "" }) }}>
+                        <Navbar.Brand onClick={() => { this.setState({ content: "catalog", search: "", categoriaSearch: "" }) }}>
                             <img
                                 src={logo}
                                 width="30"
@@ -320,7 +410,7 @@ class Home extends Component {
                 <Container>
                     <Row className="mt-5 align-items-center justify-content-between">
                         <Col xs={12} sm={12} md={12} lg={6} xl={7}>
-                            <h1 className="font-weight-bold mt-2 mb-0" onClick={() => { this.setState({ content: "catalog", search: "" }) }}>
+                            <h1 className="font-weight-bold mt-2 mb-0" onClick={() => { this.setState({ content: "catalog", search: "", categoriaSearch: "" }) }}>
                                 <span className="p-0">P</span>
                                 <span className="p-0 text-warning">ELI</span>
                                 <span className="p-0">CULAS</span></h1>
