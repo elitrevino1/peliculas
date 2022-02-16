@@ -29,7 +29,11 @@ class Home extends Component {
                 { id: 2, descripcion: "Amor" },
                 { id: 3, descripcion: "Acción" }
             ],
-            show: false
+            show: false,
+            maxPeliculas: undefined,
+            maxSearchResults: undefined,
+            maxShow: 12,
+            perPage: 12
         };
     }
 
@@ -64,7 +68,7 @@ class Home extends Component {
             }
         })
         peliculas.sort(this.sortTitulos);
-        this.setState({ peliculas: peliculas })
+        this.setState({ peliculas: peliculas, maxPeliculas: peliculas.length })
     }
 
     sortTitulos(a, b) {
@@ -77,8 +81,13 @@ class Home extends Component {
         return 0;
     }
 
-    /* handleShow = () => this.setState({ show: true });
-    handleClose = () => this.setState({ show: false }); */
+    handleShow() {
+        this.setState({ show: true });
+    }
+
+    handleClose() {
+        this.setState({ show: false });
+    }
 
     peliculaCard(nombre, categoria, duracion, director, protagonistas, id) {
         return (
@@ -89,32 +98,31 @@ class Home extends Component {
                     <p className="text-left m-0">Dir. {director}</p>
                     <br />
                     <h6 className="text-left">Protagonistas:</h6>
-                    <ul className="text-left pl-4">{protagonistas.map((actor, key) => <li key={key}>{actor}</li>)}</ul>
+                    <ul className="text-left pl-4">{protagonistas.slice(0, 5).map((actor, key) => <li key={key}>{actor}</li>)}</ul>
                     <Button variant="info" className="mr-2 mt-1 mb-2" onClick={() => { this.setState({ content: "edit", nombre: nombre, categoria: categoria.toString(), duracion: duracion, director: director, protagonistas: protagonistas.toString(), peliculaID: id }) }}><i className="fa-solid fa-pen"></i></Button>
-                    <Button variant="danger" className="mt-1 mb-2" onClick={() => { /* this.handleShow(); this.setState({ peliculaID: id }); */ this.onSumbitDelete(id) }}><i className="fa-solid fa-trash"></i></Button>
+                    <Button variant="danger" className="mt-1 mb-2" onClick={() => { this.handleShow(); this.setState({ peliculaID: id }); }}><i className="fa-solid fa-trash"></i></Button>
                 </Container>
             </Card>
         )
     }
 
-    /* confirmDelete() {
+    showPeliculas() {
         return (
-            <Modal show={this.state.show} onHide={this.handleClose}>
-                <Modal.Header closeButton>
-                    <Modal.Title>¿Estás seguro que lo quieres eliminar?</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>Esta acción no se puede deshacer</Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={this.handleClose}>
-                        Cancelar
-                    </Button>
-                    <Button variant="danger" onClick={this.onSumbitDelete(this.state.peliculaID)}>
-                        Eliminar
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+            <>{this.state.peliculas.slice(0, this.state.maxShow).map((pelicula, key) =>
+            <Col xs={12} sm={6} md={6} lg={4} xl={3} className="mb-3" key={key}>
+                {this.peliculaCard(pelicula.nombre, pelicula.categoria, pelicula.duracion, pelicula.director, pelicula.protagonistas, pelicula.id)}
+            </Col>)}</>
         )
-    } */
+    }
+
+    showSearchResults() {
+        return (
+            <>{this.state.searchResults.slice(0, this.state.maxShow).map((pelicula, key) =>
+            <Col xs={12} sm={6} md={6} lg={4} xl={3} className="mb-3" key={key}>
+                    {this.peliculaCard(pelicula.nombre, pelicula.categoria, pelicula.duracion, pelicula.director, pelicula.protagonistas, pelicula.id)}
+            </Col>)}</>
+        )
+    }
 
     content() {
         if (this.state.content === "catalog")
@@ -126,10 +134,18 @@ class Home extends Component {
                         </Col>
                     </Row>
                     <Row className="mt-2">
-                        {this.state.peliculas.map((pelicula, key) => <Col xs={12} sm={6} md={6} lg={4} xl={3} className="mb-3" key={key}>
-                            {this.peliculaCard(pelicula.nombre, pelicula.categoria, pelicula.duracion, pelicula.director, pelicula.protagonistas, pelicula.id)}
-                        </Col>)}
+                        {this.showPeliculas()}
                     </Row>
+                    {this.state.maxShow < this.state.maxPeliculas ? 
+                    <>
+                    <Row className="mt-2">
+                        <Col xs={12} className="d-flex justify-content-center">
+                            <Button variant="warning" className="mr-2 mt-2" onClick={() => { this.setState({ maxShow: this.state.maxShow+this.state.perPage }) }}>
+                                <i class="fa-solid fa-chevron-down"></i> Ver más
+                            </Button>
+                        </Col>
+                    </Row>
+                    </> : <></>}
                 </>
             )
         if (this.state.content === "search")
@@ -141,11 +157,18 @@ class Home extends Component {
                         </Col>
                     </Row>
                     <Row className="mt-2">
-                        {this.state.searchResults.map((pelicula, key) =>
-                            <Col xs={12} sm={6} md={6} lg={4} xl={3} className="mb-3" key={key}>
-                                {this.peliculaCard(pelicula.nombre, pelicula.categoria, pelicula.duracion, pelicula.director, pelicula.protagonistas, pelicula.id)}
-                            </Col>)}
+                        {this.showSearchResults()}
                     </Row>
+                    {this.state.maxShow < this.state.maxSearchResults ? 
+                    <>
+                    <Row className="mt-2">
+                        <Col xs={12} className="d-flex justify-content-center">
+                            <Button variant="warning" className="mr-2 mt-2" onClick={() => { this.setState({ maxShow: this.state.maxShow+this.state.perPage }) }}>
+                                <i class="fa-solid fa-chevron-down"></i> Ver más
+                            </Button>
+                        </Col>
+                    </Row>
+                    </> : <></>}
                 </>
             )
         if (this.state.content === "add")
@@ -161,12 +184,12 @@ class Home extends Component {
                             <Form onSubmit={(e) => e.preventDefault()}>
                                 <Form.Group className="mb-3" controlId="addTitulo">
                                     <Form.Label>Título</Form.Label>
-                                    <Form.Control type="text" placeholder="ej. The Hunger Games" value={this.state.nombre} onChange={e => this.setState({ nombre: e.target.value })} />
+                                    <Form.Control type="text" placeholder="ej. The Hunger Games" value={this.state.nombre} onChange={e => this.setState({ nombre: e.target.value })} maxLength={70} />
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="addDuracion">
                                     <Form.Label>Duración en minutos</Form.Label>
-                                    <Form.Control type="number" placeholder="ej. 120" value={this.state.duracion} onChange={e => this.setState({ duracion: e.target.value })} />
+                                    <Form.Control type="number" placeholder="ej. 120" value={this.state.duracion} onChange={e => this.setState({ duracion: e.target.value })} min={0} max={5220} />
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="addCategoria">
@@ -182,7 +205,7 @@ class Home extends Component {
 
                                 <Form.Group className="mb-3" controlId="addTitulo">
                                     <Form.Label>Director</Form.Label>
-                                    <Form.Control type="text" placeholder="ej. Suzanne Collins" value={this.state.director} onChange={e => this.setState({ director: e.target.value })} />
+                                    <Form.Control type="text" placeholder="ej. Suzanne Collins" value={this.state.director} onChange={e => this.setState({ director: e.target.value })} maxLength={70} />
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="addProtagonsitas">
@@ -214,12 +237,12 @@ class Home extends Component {
                             <Form onSubmit={(e) => e.preventDefault()}>
                                 <Form.Group className="mb-3" controlId="editTitulo">
                                     <Form.Label>Título</Form.Label>
-                                    <Form.Control type="text" value={this.state.nombre} onChange={e => this.setState({ nombre: e.target.value })} />
+                                    <Form.Control type="text" value={this.state.nombre} onChange={e => this.setState({ nombre: e.target.value })} maxLength={70} />
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="editDuracion">
                                     <Form.Label>Duración en minutos</Form.Label>
-                                    <Form.Control type="number" value={this.state.duracion} onChange={e => this.setState({ duracion: e.target.value })} />
+                                    <Form.Control type="number" value={this.state.duracion} onChange={e => this.setState({ duracion: e.target.value })} min={0} max={5220} />
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="editCategoria">
@@ -235,7 +258,7 @@ class Home extends Component {
 
                                 <Form.Group className="mb-3" controlId="editTitulo">
                                     <Form.Label>Director</Form.Label>
-                                    <Form.Control type="text" value={this.state.director} onChange={e => this.setState({ director: e.target.value })} />
+                                    <Form.Control type="text" value={this.state.director} onChange={e => this.setState({ director: e.target.value })} maxLength={70} />
                                 </Form.Group>
 
                                 <Form.Group className="mb-3" controlId="editProtagonsitas">
@@ -265,6 +288,7 @@ class Home extends Component {
                 searchResults.push(pelicula)
             }
         })
+        this.setState({ maxSearchResults: searchResults.length });
         return searchResults;
     }
 
@@ -275,6 +299,7 @@ class Home extends Component {
                 categoriaResults.push(pelicula)
             }
         })
+        this.setState({ maxSearchResults: categoriaResults.length });
         return categoriaResults;
     }
 
@@ -336,7 +361,7 @@ class Home extends Component {
         };
         let response1 = await axios.post('http://localhost:8080/editPelicula', pelicula);
 
-        let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim() });
+        let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim().replace("\n", " ").replaceAll("\n", "") });
 
         let pid = {
             peliculaID: id
@@ -357,6 +382,8 @@ class Home extends Component {
     }
 
     async onSubmitAdd() {
+        /* let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim().replace("\n", " ").replaceAll("\n", "") });
+        console.log(arr); */
         let pelicula = {
             nombre: this.state.nombre,
             categoria: this.state.categoria,
@@ -365,7 +392,7 @@ class Home extends Component {
         };
         let response1 = await axios.post('http://localhost:8080/addPelicula', pelicula);
 
-        let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim() });
+        let arr = this.state.protagonistas.split(",").map((actor) => { return actor.trim().replace("\n", " ").replaceAll("\n", "") });
         arr.forEach(async (actor) => {
             let protagonista = {
                 actor: actor
@@ -383,7 +410,7 @@ class Home extends Component {
         }
         let response1 = await axios.post('http://localhost:8080/deletePelicula', pid);
         /* this.handleClose; */
-        
+
         this.componentDidMount();
         this.setState({ content: "catalog" });
     }
@@ -426,7 +453,7 @@ class Home extends Component {
                                     <Col xs={6} sm={6} md={6} lg={5} xl={4}>
                                         <Form.Group className="mt-3" controlId="search">
                                             <Form.Label>¿Buscas algo en específico?</Form.Label>
-                                            <Form.Control type="text" placeholder="Título, director..." value={this.state.search} onChange={e => this.setState({ search: e.target.value })} />
+                                            <Form.Control type="text" placeholder="Título, director..." value={this.state.search} onChange={e => this.setState({ search: e.target.value })} maxLength={100} />
                                         </Form.Group>
                                     </Col>
                                     <Col xs={6} sm={6} md={6} lg={2} xl={2}>
@@ -451,7 +478,20 @@ class Home extends Component {
                         </Col>
                     </Row>
                     {this.content()}
-                    {/* {this.confirmDelete()} */}
+                    <Modal show={this.state.show} onHide={() => { this.handleClose(); this.setState({ peliculaID: -1 }); }}>
+                        <Modal.Header closeButton>
+                            <Modal.Title>¿Estás seguro que lo quieres eliminar?</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>Esta acción no se puede deshacer</Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={() => { this.handleClose(); this.setState({ peliculaID: -1 }); }}>
+                                Cancelar
+                            </Button>
+                            <Button variant="danger" onClick={() => { this.onSumbitDelete(this.state.peliculaID); this.handleClose(); }}>
+                                Eliminar
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>
                     <br />
                     <br />
                     <br />
